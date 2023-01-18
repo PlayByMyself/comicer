@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "comicer"
-version = "0.1.0"
+version = "0.1.1"
 description = "a comic downloader"
 authors = ["Ye Jun <yejun.code@gmail.com>"]
 readme = "README.md"
