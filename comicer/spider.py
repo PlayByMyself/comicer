@@ -5,8 +5,12 @@ from collections import defaultdict
 from pathlib import Path
 from typing import DefaultDict, Optional, Set
 
-from playwright.async_api import (BrowserContext, Page, Playwright,
-                                  async_playwright)
+from playwright.async_api import (
+    BrowserContext,
+    Page,
+    Playwright,
+    async_playwright,
+)
 from pydantic import HttpUrl, parse_obj_as
 
 from comicer.config import CONFIG
@@ -122,8 +126,11 @@ class Spider:
 
     async def get_page(self, context: BrowserContext):
         if not context.pages:
-            return await context.new_page()
-        return context.pages[0]
+            page = await context.new_page()
+        else:
+            page = context.pages[0]
+        page.set_default_timeout(30000)
+        return page
 
     def browser_type(self, playwrite: Playwright):
         return playwrite.chromium
@@ -185,6 +192,7 @@ class MoxMoeSpider(Spider):
 async def run():
     spider = MoxMoeSpider()
     await spider.start()
+
 
 if __name__ == "__main__":
     asyncio.run(run())
