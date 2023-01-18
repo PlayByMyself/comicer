@@ -120,7 +120,7 @@ class Spider:
         self.favorite_urls.update([url for url in urls if url])
 
     async def goto(self, page: Page, url: HttpUrl):
-        res = await page.goto(url)
+        res = await page.goto(url, timeout=0)
         await asyncio.sleep(1)
         return res
 
@@ -129,7 +129,6 @@ class Spider:
             page = await context.new_page()
         else:
             page = context.pages[0]
-        page.set_default_timeout(30000)
         return page
 
     def browser_type(self, playwrite: Playwright):
