@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 from collections import defaultdict
 from pathlib import Path
@@ -15,6 +16,8 @@ from pydantic import HttpUrl, parse_obj_as
 
 from comicer.config import CONFIG
 from comicer.source import Source
+
+logging.basicConfig(level=CONFIG.log_level, format=CONFIG.log_format)
 
 
 class Spider:
@@ -38,9 +41,15 @@ class Spider:
             page = await self.init_login_page(p)
             await self.goto(page, self.source.start_url)
             await self.parse_favorite(page)
+            logging.debug(
+                "favorite url size %s", await self.favorite_url_size()
+            )
             async for url in self.yield_favorite_url():
                 await self.goto(page, url)
                 await self.parse_download(page)
+            logging.debug(
+                "download url size %s", await self.download_url_size()
+            )
             await self.download(page)
 
     async def download(self, page: Page):
@@ -59,6 +68,7 @@ class Spider:
                 if url in exist_url_list:
                     continue
                 exist_url_list.append(url)
+                logging.debug("start download %s", url)
                 async with page.expect_download(timeout=0) as download_info:
                     try:
                         await self.goto(page, url)
@@ -69,9 +79,22 @@ class Spider:
                     title_path, download.suggested_filename
                 )
                 await download.save_as(file_path)
+                logging.debug("download %s success save as %s", url, file_path)
             with open(url_file_path, "w") as f:
                 exist_url_list = list(set(exist_url_list))
                 json.dump(exist_url_list, f)
+
+    async def favorite_url_size(self):
+        return len(self.favorite_urls)
+
+    async def download_url_size(self):
+        return len(
+            [
+                url
+                for key in self.download_urls.keys()
+                for url in self.download_urls[key]
+            ]
+        )
 
     async def init_login_page(self, p: Playwright):
         context = await self.get_context(p)
@@ -82,8 +105,11 @@ class Spider:
         return page
 
     async def get_context(self, p: Playwright):
+        proxy_url = CONFIG.https_proxy or CONFIG.http_proxy
         browser_type = self.browser_type(p)
-        browser = await browser_type.launch(headless=True)
+        browser = await browser_type.launch(
+            headless=True, proxy={"server": proxy_url} if proxy_url else None
+        )
         if os.path.exists(self.state_file):
             context = await browser.new_context(storage_state=self.state_file)
         else:
@@ -119,9 +145,12 @@ class Spider:
         ]
         self.favorite_urls.update([url for url in urls if url])
 
-    async def goto(self, page: Page, url: HttpUrl):
+    async def goto(self, page: Page, url: HttpUrl, sleep: float = 1):
+        await asyncio.sleep(sleep)
         res = await page.goto(url, timeout=0)
-        await asyncio.sleep(1)
+        await page.wait_for_load_state("networkidle")
+        await page.wait_for_load_state("domcontentloaded")
+        logging.debug("goto %s success, %s", url, await page.title())
         return res
 
     async def get_page(self, context: BrowserContext):
@@ -149,7 +178,11 @@ class Spider:
             raise Exception("login failed")
 
     async def is_login(self, page: Page):
-        res = await self.goto(page, self.source.start_url)
+        try:
+            res = await self.goto(page, self.source.start_url, sleep=3)
+        except Exception as e:
+            logging.exception(e)
+            return False
         return res and res.url == str(self.source.start_url)
 
     async def yield_tile(self):

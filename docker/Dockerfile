@@ -58,7 +58,9 @@ ENV DEFAULT_USER=comicer
 ENV DEFAULT_UID=1000
 ENV DEFAULT_GID=1000
 RUN groupadd -g $DEFAULT_GID ${DEFAULT_USER} && \
-    useradd --system -m -s /bin/bash -u ${DEFAULT_UID} -g ${DEFAULT_GID} ${DEFAULT_USER}
+    useradd --system -m -s /bin/bash -u ${DEFAULT_UID} -g ${DEFAULT_GID} ${DEFAULT_USER} && \
+    mkdir /comic && \
+    chown ${DEFAULT_USER}:${DEFAULT_USER} /comic
 COPY --from=install-whl $VENV_PATH $VENV_PATH
 COPY ./docker/entrypoint.sh /
 RUN chmod +x /entrypoint.sh

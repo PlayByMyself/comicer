@@ -11,6 +11,11 @@ AM_I_IN_A_DOCKER_CONTAINER = os.environ.get(
     "AM_I_IN_A_DOCKER_CONTAINER", False
 )
 
+if AM_I_IN_A_DOCKER_CONTAINER:
+    USER_CONFIG_PATH = Path("/config")
+else:
+    USER_CONFIG_PATH = Path("~/.comicer").expanduser()
+
 PROJECT_DIR = Path(__file__).parent.parent.absolute()
 
 
@@ -26,13 +31,10 @@ def default_toml_config_settings_source(
 def user_toml_config_settings_source(
     settings: BaseSettings,
 ) -> Dict[str, Any]:
-    if AM_I_IN_A_DOCKER_CONTAINER:
-        user_config_path = Path("/config/config.toml")
-    else:
-        user_config_path = Path("~/.comicer/config.toml").expanduser()
-    if not user_config_path.exists():
+    user_config_file_path = USER_CONFIG_PATH.joinpath("config.toml")
+    if not user_config_file_path.exists():
         return {}
-    return toml.load(user_config_path)
+    return toml.load(user_config_file_path)
 
 
 class ExpanduserPathMixin(BaseModel):
@@ -52,8 +54,12 @@ class SpiderConfig(ExpanduserPathMixin, BaseModel):
 
 
 class GlobalConfig(ExpanduserPathMixin, BaseSettings):
-    save_path: Path = Path("~/comic")
-    state_path: Path = Path("~/.comicer/state")
+    save_path: Path = Path("/comic")
+    state_path: Path = USER_CONFIG_PATH.joinpath("state")
+    log_level: Optional[int | str] = "INFO"
+    log_format: str = "%(asctime)s - %(levelname)s - %(message)s"
+    https_proxy: Optional[str] = None
+    http_proxy: Optional[str] = None
     mox: Optional[SpiderConfig] = None
 
     class Config:
