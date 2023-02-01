@@ -7,5 +7,6 @@ username_selector = "input[name=email]"
 password_selector = "input[name=passwd]"
 login_submit_selector = "button[class=bt_sml_main][type=button]"
 favorite_url_selector = "tbody a[href^='https://mox.moe/c'][href$='.htm'][target=_blank]"
-download_ulr_selector = "tbody a[href^='/down']:nth-child(3)"
+download_url_selector = "tbody a[href^='/down']:nth-child(3)"
+download_url_text = ["下載"]
 title_selector = "font[class=font_big]"

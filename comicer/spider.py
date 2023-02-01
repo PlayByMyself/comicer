@@ -123,8 +123,10 @@ class Spider:
         urls = [
             await element.get_attribute("href")
             for element in await page.query_selector_all(
-                self.source.download_ulr_selector
+                self.source.download_url_selector
             )
+            if not self.source.download_url_text
+            or await element.text_content() in self.source.download_url_text
         ]
         self.download_urls[title].update([url for url in urls if url])
 
